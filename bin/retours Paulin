@@ -1,0 +1,7 @@
+#Partie 2
+
+from Bio import SeqIO
+def rec(genome,protein):
+    for seq_record in SeqIO.parse(f'data/genomes/{genome}/protein.faa',"fasta"):
+        if seq_record.id == protein:
+            return(seq_record.seq)

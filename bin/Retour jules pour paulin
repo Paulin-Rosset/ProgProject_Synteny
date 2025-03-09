@@ -1,0 +1,11 @@
+#Affichage des résultats:
+    print(f"--------------------Protéine intérêt informations---------------------")
+    print(f"\nVous avez lancé une analyse de synténie sur la protéine", proteine, "sur le génome d'E. coli", genome)
+    print(f"\nLes informations sur notre protéine d'intéret sont : ", list_proteine_info)
+    print(f"\nLa séquence de la protéine d'intéret est : ", record.seq)
+    print(f"\n-------------------Protéine amont/aval informations---------------------")
+    print(f"\nLa protéine en amont est", proteine_amont)
+    print(f"\nLes informations sur la protéine en amont sont :", recup_info_prot(genome,proteine_amont))
+    print(f"\nLa protéine en aval est", proteine_aval)
+    print(f"\nLes informations sur la protéine en amont sont :", recup_info_prot(genome,proteine_aval))
+    print(f"\nLes blasts se sont effectués en",difference)

@@ -1,0 +1,285 @@
+import subprocess
+
+def blastp (sequence,genome2):
+    fh = open("sequence_principale.fasta","w")
+    SeqIO.write(sequence, fh,"fasta")
+    fh.close()
+    l_cmdos=["data/Blast+/linux/bin/blastp","data/Blast+/macosx/bin/blastp","data/Blast+/win/bin/blastp.exe"]
+    cmdos=l_cmdos[list_os.index(my_os_type)]
+    
+    cmd_line=[cmdos,"-query","./sequence_principale.fasta","-db","data/genomes/"+genome2+"/"+genome2,"-evalue","0.001","-out","result_blast.xml","-outfmt", "5"]
+    #cmd_line=cmdos+" -query"+" ./sequence_principale.fasta"+" -db"+" ./"+genome2+"/"+genome2+" -evalue"+" 0.001"+" -out"+" result_blast.xml"+" -outfmt"+" 5"
+    
+    subprocess.run(cmd_line)
+    os.remove("sequence_principale.fasta")
+
+blastp(sequence,"GCF_001901045.1")
+
+prochain but formater le fichier xml
+from Bio.Blast import NCBIXML
+blast_record = NCBIXML.read(result_handle)
+
+
+OUT = open(sys.argv[4], 'w')
+OUT.write("Query Name\tQuery Length\tAlignment Title\tAlignment ID\tAlignment Def\teValue")
+from Bio.Blast import NCBIXML
+file=open("./result_blast.xml", "r")
+blast_record=NCBIXML.read(file)
+file.close()
+for rec in blast_records:
+    for alignement in rec.alignments:
+        for hsp in alignment.hsps:
+            OUT.write('\n'+ str(rec.query_id) + '\t' + str(rec.query_length) + '\t' + str(alignment.title) + '\t' + str(alignment.hit_id) + '\t' + str(alignment.hit_def) + '\t' + str(hsp.expect))
+
+
+
+
+
+from pygenomeviz import GenomeViz
+from matplotlib.lines import Line2D
+
+def strand_protein(genome,dico_prot):
+    if dico_prot[genome].Strand.item()=="-":
+        return -1
+    else : return 1
+
+def info_affichage_genome (genome,dico_aval,dico_amont,dico_centre) :
+    name=genome
+    if type(dico_amont[genome])==str:#'Pas de résultat':
+        L1=[]
+    else:
+        L1=[dico_amont[genome].End.item(),dico_amont[genome].Begin.item()]
+    if type(dico_aval[genome])==str:#'Pas de résultat':
+        L2=[]
+    else:
+        L2=[dico_aval[genome].End.item(),dico_aval[genome].Begin.item()]
+    if type(dico_centre[genome])==str:#'Pas de résultat':
+        L3=[]
+    else:
+        L3=[dico_centre[genome].End.item(),dico_centre[genome].Begin.item()]
+
+       
+    #L=[dico_aval[genome].End.item(),dico_aval[genome].Begin.item(),dico_amont[genome].End.item(),dico_amont[genome].Begin.item(),dico_centre[genome].End.item(),dico_centre[genome].Begin.item()]
+    L=L1+L2+L3
+    if L==[]:
+        return {"name" : name+ "les trois gènes sont absent de ce génome", "size" : 0, "cds_list" : ((0,0,0),(0,0,0),(0,0,0))}
+    fin=max(L)+500
+    debut=min(L)-500
+    taille = fin - debut 
+    if taille>=100000 :
+        return {"name" : name+ "la disatance entre les gènes est trop grande pour l'affichage", "size" : 0, "cds_list" : ((0,0,0),(0,0,0),(0,0,0))}
+    
+    if type(dico_amont[genome])==str:#'Pas de résultat':
+        a=(0,0,0)
+    else:
+        begin_cds_amont  = taille - (fin - dico_amont[genome].Begin.item())
+        end_cds_amont    = taille - (fin - dico_amont[genome].End.item())
+        signe_amont = strand_protein(genome,dico_amont)
+        a=(begin_cds_amont,end_cds_amont,signe_amont)
+    if type(dico_aval[genome])==str :#'Pas de résultat':
+        b=(0,0,0)
+    else:
+        begin_cds_aval   = taille - (fin - dico_aval[genome].Begin.item())
+        end_cds_aval     = taille - (fin - dico_aval[genome].End.item())
+        signe_aval  = strand_protein(genome,dico_aval)
+        b=(begin_cds_aval,end_cds_aval,signe_aval)
+    if type(dico_centre[genome])==str:#'Pas de résultat':
+        c=(0,0,0)
+    else:
+        begin_cds_centre = taille - (fin - dico_centre[genome].Begin.item())
+        end_cds_centre   = taille - (fin - dico_centre[genome].End.item())
+        signe_centre = strand_protein(genome,dico_centre)
+        c=(begin_cds_centre,end_cds_centre,signe_centre)
+
+    cds_list=(a,b,c)
+
+    return {"name" : name, "size" : taille, "cds_list" : cds_list}
+    #if signe_centre==-1 :
+    #    fin   = dico_amont[genome].End.item()+500
+    #    debut = dico_aval[genome].Begin.item()-500      ### on y avait pensé 
+    #else :
+    #    fin   = dico_aval[genome].End.item()+500
+    #    debut = dico_amont[genome].Begin.item()-500
+
+ 
+
+
+
+
+"""
+gv = GenomeViz()
+track = gv.add_feature_track(name, genome_size)
+print(cds_list)
+for idx, cds in enumerate(cds_list, 1):
+    start, end, strand = cds
+    track.add_feature(start, end, strand, label=f"CDS{idx:02d}")
+"""
+
+genome_list=[]
+for genome_id in dict_proteine_info.keys() :
+    genome_list.append(info_affichage_genome(genome_id,dict_proteine_aval_info,dict_proteine_amont_info,dict_proteine_info))
+    
+#genome_list = (
+    #{"name": "genome 01", "size": 1000, "cds_list": ((150, 300, 1), (500, 700, -1), (750, 950, 1))},
+    #{"name": "genome 02", "size": 1300, "cds_list": ((50, 200, 1), (350, 450, 1), (700, 900, -1), (950, 1150, -1))},
+    #{"name": "genome 03", "size": 1200, "cds_list": ((150, 300, 1), (350, 450, -1), (500, 700, -1), (700, 900, -1))},
+#)
+genbe=["amont","aval","centre"]
+color=["blue","red","green"]
+gv = GenomeViz(tick_style="axis")
+for elem in genome_list:
+    name, size, cds_list = elem["name"], elem["size"], elem["cds_list"]
+    track = gv.add_feature_track(name, size)
+    for idx, cds in enumerate(cds_list, 1):
+        start, end, strand = cds
+        track.add_feature(start, end, strand, label=genbe[idx-1], linewidth=1, labelrotation=0, labelvpos="top", labelhpos="center", labelha="center", facecolor=color[idx-1],labelsize=8)
+     
+fig = gv.plotfig()
+fig.savefig("example08.png")
+
+
+
+#gv.savefig("example222222.png")
+
+
+######################################################## dernière version
+from pygenomeviz import GenomeViz
+from matplotlib.lines import Line2D
+
+def strand_protein(genome,dico_prot):
+    if dico_prot[genome].Strand.item()=="-":
+        return -1
+    else : return 1
+
+def info_affichage_genome (genome,dico_aval,dico_amont,dico_centre) :
+    name=genome
+    if type(dico_amont[genome])==str:#'Pas de résultat':
+        L1=[]
+    else:
+        L1=[dico_amont[genome].End.item(),dico_amont[genome].Begin.item()]
+    if type(dico_aval[genome])==str:#'Pas de résultat':
+        L2=[]
+    else:
+        L2=[dico_aval[genome].End.item(),dico_aval[genome].Begin.item()]
+    if type(dico_centre[genome])==str:#'Pas de résultat':
+        L3=[]
+    else:
+        L3=[dico_centre[genome].End.item(),dico_centre[genome].Begin.item()]
+
+       
+    #L=[dico_aval[genome].End.item(),dico_aval[genome].Begin.item(),dico_amont[genome].End.item(),dico_amont[genome].Begin.item(),dico_centre[genome].End.item(),dico_centre[genome].Begin.item()]
+    L=L1+L2+L3
+    if L==[]:
+        return {"name" : name+ "les trois gènes sont absent de ce génome", "size" : 0, "cds_list" : ((0,0,0,(0,0),""),(0,0,0,(0,0),""),(0,0,0,(0,0),""))}
+    fin=max(L)+500
+    debut=min(L)-500
+    taille = fin - debut 
+    if taille>=100000 :
+        return {"name" : name, "size" : taille, "cds_list" : ((0,0,0,(0,0),""),(0,0,0,(0,0),""),(0,0,0,(0,0),""))}
+    
+    if type(dico_amont[genome])==str:#'Pas de résultat':
+        a=(0,0,0,(0,0),"")
+    else:
+        begin_cds_amont  = taille - (fin - dico_amont[genome].Begin.item())
+        end_cds_amont    = taille - (fin - dico_amont[genome].End.item())
+        signe_amont = strand_protein(genome,dico_amont)
+        true_position_1=(dico_amont[genome].Begin.item(),dico_amont[genome].End.item())
+        protein_id_1=dico_amont[genome].Protein_Id.item()
+        a=(begin_cds_amont,end_cds_amont,signe_amont,true_position_1,protein_id_1)
+        
+    
+    if type(dico_aval[genome])==str :#'Pas de résultat':
+        b=(0,0,0,(0,0),"")
+    else:
+        begin_cds_aval   = taille - (fin - dico_aval[genome].Begin.item())
+        end_cds_aval     = taille - (fin - dico_aval[genome].End.item())
+        signe_aval  = strand_protein(genome,dico_aval)
+        true_position_2=(dico_aval[genome].Begin.item(),dico_aval[genome].End.item())
+        protein_id_2=dico_aval[genome].Protein_Id.item()
+        b=(begin_cds_aval,end_cds_aval,signe_aval,true_position_2,protein_id_2)
+        
+    if type(dico_centre[genome])==str:#'Pas de résultat':
+        c=(0,0,0,(0,0),"")
+    else:
+        begin_cds_centre = taille - (fin - dico_centre[genome].Begin.item())
+        end_cds_centre   = taille - (fin - dico_centre[genome].End.item())
+        signe_centre = strand_protein(genome,dico_centre)
+        true_position_3=(dico_centre[genome].Begin.item(),dico_centre[genome].End.item())
+        protein_id_3=dico_centre[genome].Protein_Id.item()
+        c=(begin_cds_centre,end_cds_centre,signe_centre,true_position_3,protein_id_3)
+        
+
+    cds_list=(a,b,c)
+
+    return {"name" : name, "size" : taille, "cds_list" : cds_list}
+    #if signe_centre==-1 :
+    #    fin   = dico_amont[genome].End.item()+500
+    #    debut = dico_aval[genome].Begin.item()-500      ### on y avait pensé 
+    #else :
+    #    fin   = dico_aval[genome].End.item()+500
+    #    debut = dico_amont[genome].Begin.item()-500
+
+ 
+
+
+
+
+"""
+gv = GenomeViz()
+track = gv.add_feature_track(name, genome_size)
+print(cds_list)
+for idx, cds in enumerate(cds_list, 1):
+    start, end, strand = cds
+    track.add_feature(start, end, strand, label=f"CDS{idx:02d}")
+"""
+
+genome_list=[]
+for genome_id in dict_proteine_info.keys() :
+    genome_list.append(info_affichage_genome(genome_id,dict_proteine_aval_info,dict_proteine_amont_info,dict_proteine_info))
+    
+#genome_list = (
+    #{"name": "genome 01", "size": 1000, "cds_list": ((150, 300, 1), (500, 700, -1), (750, 950, 1))},
+    #{"name": "genome 02", "size": 1300, "cds_list": ((50, 200, 1), (350, 450, 1), (700, 900, -1), (950, 1150, -1))},
+    #{"name": "genome 03", "size": 1200, "cds_list": ((150, 300, 1), (350, 450, -1), (500, 700, -1), (700, 900, -1))},
+#)
+
+
+
+gv = GenomeViz(tick_style="axis")
+color=["blue","red","green"]
+for elem in genome_list:
+    if elem['size']>=100000 :
+        track=gv.add_feature_track(elem["name"],taille)
+        track.add_feature(1000,2500,1,label=("La distance entre les gènes est trop grande pour l'affichage"),linewidth=1, labelrotation=0, labelvpos="top", labelhpos="center", labelha="center",labelsize=14)
+
+    else :
+        name, size, cds_list = elem["name"], elem["size"], elem["cds_list"]
+        taille=size
+        track = gv.add_feature_track(name, size)
+        for idx, cds in enumerate(cds_list, 1):
+            start, end, strand, position, protein_id= cds
+            if position!=(0,0) :
+                if name==genome:
+                    track.add_feature(200, 200, 1, label="* Génome de référence", labelrotation=0, labelvpos="top", labelhpos="center", labelha="center",labelsize=14)
+                track.add_exon_feature([(start,end)], strand,exon_labels=[protein_id],labelrotation=0, labelha="center",exon_label_kws={"y": 0, "va": "center", "color": "white"})
+                track.add_feature(start, end, strand, label="begin : "+str(position[0])+"       "+" end : "+str(position[1]), linewidth=1, labelrotation=0, labelvpos="top", labelhpos="center", labelha="center", facecolor=color[idx-1],labelsize=10)
+
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+
+fig = gv.plotfig()
+
+handles = [
+    Patch(color="green", label="Centre"),
+    Patch(color="blue", label="Aval"),
+    Patch(color="red", label="Amont"),
+]
+fig.legend(handles=handles, bbox_to_anchor=(1, 1))              
+
+fig.savefig("example08.png")
+
+
+
+
+
+
